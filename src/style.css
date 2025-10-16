@@ -3,3 +3,9 @@
   vertical-align: top;
   border: 1px solid salmon;
 }
+
+canvas {
+  height: 256px;
+  width: 256px;
+  border: 1px solid #000000;
+}
