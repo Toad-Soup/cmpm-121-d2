@@ -72,6 +72,7 @@ function redraw() {
 
 document.body.append(document.createElement("br"));
 
+//the following code is from Professor Smiths Quaint-Paint program
 const undoButton = document.createElement("button");
 undoButton.innerHTML = "undo";
 document.body.append(undoButton);
@@ -80,6 +81,19 @@ undoButton.addEventListener("click", () => {
   const lastLine = lines.pop();
   if (lastLine) {
     redoLines.push(lastLine);
+    redraw();
+  }
+});
+
+const redoButton = document.createElement("button");
+redoButton.innerHTML = "redo";
+document.body.append(redoButton);
+
+//inverse of the undo button
+redoButton.addEventListener("click", () => {
+  const lastLine = redoLines.pop();
+  if (lastLine) {
+    lines.push(lastLine);
     redraw();
   }
 });
