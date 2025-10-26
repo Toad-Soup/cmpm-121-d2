@@ -8,9 +8,11 @@ document.body.innerHTML = `
 //create a class to hold all the points
 class PointHolder {
   private points: { x: number; y: number }[] = [];
+  private thickness: number;
 
-  constructor(startX: number, startY: number) {
+  constructor(startX: number, startY: number, thickness: number) {
     this.points.push({ x: startX, y: startY });
+    this.thickness = thickness;
   }
 
   drag(x: number, y: number) {
@@ -27,6 +29,8 @@ class PointHolder {
     for (const p of this.points) {
       ctx.lineTo(p.x, p.y);
     }
+
+    ctx.lineWidth = this.thickness;
     ctx.stroke();
   }
 }
@@ -43,12 +47,14 @@ const redoLines: PointHolder[] = [];
 
 let currentLine: PointHolder | null = null;
 
+let currentSize = 2;
+
 canvas.addEventListener("mousedown", (e) => {
   cursor.active = true;
   cursor.x = e.offsetX;
   cursor.y = e.offsetY;
 
-  currentLine = new PointHolder(cursor.x, cursor.y);
+  currentLine = new PointHolder(cursor.x, cursor.y, currentSize);
   lines.push(currentLine);
   redoLines.length = 0;
 
@@ -116,3 +122,36 @@ redoButton.addEventListener("click", () => {
     redraw();
   }
 });
+
+const clearButton = document.createElement("button");
+clearButton.innerHTML = "clear";
+document.body.append(clearButton);
+
+clearButton.addEventListener("click", () => {
+  lines.length = 0;
+  redraw();
+});
+
+const thinButton = document.createElement("button");
+thinButton.innerHTML = "thin line";
+document.body.append(thinButton);
+thinButton.addEventListener("click", () => {
+  currentSize = 2;
+  setSelectedTool(thinButton);
+});
+
+const thickButton = document.createElement("button");
+thickButton.innerHTML = "thick line";
+document.body.append(thickButton);
+
+thickButton.addEventListener("click", () => {
+  currentSize = 5;
+  setSelectedTool(thickButton);
+});
+
+function setSelectedTool(selected: HTMLButtonElement) {
+  document.querySelectorAll("button").forEach((btn) =>
+    btn.classList.remove("selectedTool")
+  );
+  selected.classList.add("selectedTool");
+}

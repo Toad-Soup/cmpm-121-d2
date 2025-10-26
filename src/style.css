@@ -8,3 +8,8 @@ canvas {
   border-radius: 15px;
   border: 1px solid black;
 }
+
+.selectedTool {
+  background-color: lightblue;
+  border: 2px solid blue;
+}
