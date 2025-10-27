@@ -7,8 +7,8 @@ document.body.innerHTML = `
 
 //create a class to hold all the points
 class PointHolder {
-  private points: { x: number; y: number }[] = [];
-  private thickness: number;
+  points: { x: number; y: number }[] = [];
+  thickness: number;
 
   constructor(startX: number, startY: number, thickness: number) {
     this.points.push({ x: startX, y: startY });
@@ -35,6 +35,38 @@ class PointHolder {
   }
 }
 
+class ToolPreview {
+  private x: number;
+  private y: number;
+  private thickness: number;
+
+  constructor(x: number, y: number, thickness: number) {
+    this.x = x;
+    this.y = y;
+    this.thickness = thickness;
+  }
+
+  updatePosition(x: number, y: number) {
+    this.x = x;
+    this.y = y;
+  }
+
+  updateThickness(thickness: number) {
+    this.thickness = thickness;
+  }
+
+  display(ctx: CanvasRenderingContext2D) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.strokeStyle = "rgba(0, 0, 0, 0.4)";
+    ctx.lineWidth = 1;
+    ctx.arc(this.x, this.y, this.thickness / 2, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+    ctx.fill();
+  }
+}
+
 const canvas = document.getElementById("canvas") as HTMLCanvasElement;
 const ctx = canvas.getContext("2d") as CanvasRenderingContext2D;
 canvas.height = 256;
@@ -46,55 +78,77 @@ const lines: PointHolder[] = [];
 const redoLines: PointHolder[] = [];
 
 let currentLine: PointHolder | null = null;
+let currentPreview: ToolPreview | null = new ToolPreview(0, 0, 2);
 
-let currentSize = 2;
+let currentSize = 4;
 
 canvas.addEventListener("mousedown", (e) => {
   cursor.active = true;
   cursor.x = e.offsetX;
   cursor.y = e.offsetY;
+  currentPreview = null;
 
   currentLine = new PointHolder(cursor.x, cursor.y, currentSize);
   lines.push(currentLine);
   redoLines.length = 0;
 
-  canvas.dispatchEvent(new Event("drawing-changed"));
+  notify("drawing-changed");
 });
 
 canvas.addEventListener("mousemove", (e) => {
-  if (cursor.active) {
-    if (currentLine === null) {
-      return;
-    }
-    cursor.x = e.offsetX;
-    cursor.y = e.offsetY;
+  cursor.x = e.offsetX;
+  cursor.y = e.offsetY;
 
+  if (cursor.active && currentLine) {
     currentLine.drag(cursor.x, cursor.y);
     canvas.dispatchEvent(new Event("drawing-changed"));
-
-    canvas.dispatchEvent(new Event("drawing-changed"));
+  } else {
+    if (!currentPreview) {
+      currentPreview = new ToolPreview(cursor.x, cursor.y, currentSize);
+    } else {
+      currentPreview.updatePosition(cursor.x, cursor.y);
+    }
+    canvas.dispatchEvent(new Event("tool-moved"));
   }
 });
 
 canvas.addEventListener("mouseup", () => {
   cursor.active = false;
   currentLine = null;
+  currentPreview = new ToolPreview(cursor.x, cursor.y, currentSize);
 
-  canvas.dispatchEvent(new Event("drawing-changed"));
+  notify("drawing-changed");
 });
 
+/*********************Event Listeners****************************************/
 //add the exception function thingy
 canvas.addEventListener("drawing-changed", () => {
   redraw();
 });
+
+canvas.addEventListener("tool-moved", () => {
+  redraw(); // clear + draw lines
+});
+
+/*****************************************************************************/
 
 function redraw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   for (const line of lines) {
     line.display(ctx);
   }
+  if (!cursor.active && currentPreview) {
+    currentPreview.display(ctx);
+  }
 }
 
+//use notify instead of dispatching a new event every time,
+//from Prof Smiths code, but minus the bus
+function notify(message: string) {
+  canvas.dispatchEvent(new Event(message));
+}
+
+/********************************Buttons**************************************************** */
 document.body.append(document.createElement("br"));
 
 //the following code is from Professor Smiths Quaint-Paint program
@@ -136,8 +190,11 @@ const thinButton = document.createElement("button");
 thinButton.innerHTML = "thin line";
 document.body.append(thinButton);
 thinButton.addEventListener("click", () => {
-  currentSize = 2;
+  currentSize = 4;
   setSelectedTool(thinButton);
+  if (currentPreview) {
+    currentPreview.updateThickness(currentSize);
+  }
 });
 
 const thickButton = document.createElement("button");
@@ -145,10 +202,14 @@ thickButton.innerHTML = "thick line";
 document.body.append(thickButton);
 
 thickButton.addEventListener("click", () => {
-  currentSize = 5;
+  currentSize = 10;
   setSelectedTool(thickButton);
+  if (currentPreview) {
+    currentPreview.updateThickness(currentSize);
+  }
 });
 
+//functionality for changing the selected button, rest in style.css
 function setSelectedTool(selected: HTMLButtonElement) {
   document.querySelectorAll("button").forEach((btn) =>
     btn.classList.remove("selectedTool")
