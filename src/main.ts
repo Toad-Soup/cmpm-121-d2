@@ -35,6 +35,7 @@ class PointHolder {
   }
 }
 
+//create a class for previewing the lil line dot drawing thing
 class ToolPreview {
   private x: number;
   private y: number;
@@ -67,6 +68,55 @@ class ToolPreview {
   }
 }
 
+//add a new class for sticker functionality
+class PlaceSticker {
+  private x: number;
+  private y: number;
+  private sticker: string;
+
+  constructor(x: number, y: number, sticker: string) {
+    this.x = x;
+    this.y = y;
+    this.sticker = sticker;
+  }
+
+  drag(x: number, y: number) {
+    this.x = x;
+    this.y = y;
+  }
+
+  display(ctx: CanvasRenderingContext2D) {
+    ctx.font = "24px serif";
+    ctx.fillText(this.sticker, this.x - 12, this.y + 8);
+  }
+}
+
+//add anotha class for the preview the same way the cursor preview was done
+class StickerPreview {
+  private x: number;
+  private y: number;
+  private sticker: string;
+
+  constructor(x: number, y: number, sticker: string) {
+    this.x = x;
+    this.y = y;
+    this.sticker = sticker;
+  }
+
+  updatePosition(x: number, y: number) {
+    this.x = x;
+    this.y = y;
+  }
+
+  display(ctx: CanvasRenderingContext2D) {
+    ctx.save();
+    ctx.font = "24px serif";
+    ctx.globalAlpha = 0.5;
+    ctx.fillText(this.sticker, this.x - 12, this.y + 8);
+    ctx.restore();
+  }
+}
+
 const canvas = document.getElementById("canvas") as HTMLCanvasElement;
 const ctx = canvas.getContext("2d") as CanvasRenderingContext2D;
 canvas.height = 256;
@@ -74,13 +124,19 @@ canvas.width = 256;
 
 const cursor = { active: false, x: 0, y: 0 };
 
-const lines: PointHolder[] = [];
-const redoLines: PointHolder[] = [];
+const lines: (PointHolder | PlaceSticker)[] = [];
+const redoLines: (PointHolder | PlaceSticker)[] = [];
 
-let currentLine: PointHolder | null = null;
-let currentPreview: ToolPreview | null = new ToolPreview(0, 0, 2);
+let currentLine: PointHolder | PlaceSticker | null = null;
+let currentPreview: ToolPreview | StickerPreview | null = new ToolPreview(
+  0,
+  0,
+  2,
+);
 
 let currentSize = 4;
+let currentTool: "draw" | "sticker" = "draw";
+let currentSticker = "🪼";
 
 canvas.addEventListener("mousedown", (e) => {
   cursor.active = true;
@@ -88,9 +144,17 @@ canvas.addEventListener("mousedown", (e) => {
   cursor.y = e.offsetY;
   currentPreview = null;
 
-  currentLine = new PointHolder(cursor.x, cursor.y, currentSize);
-  lines.push(currentLine);
+  if (currentTool === "draw") {
+    currentLine = new PointHolder(cursor.x, cursor.y, currentSize);
+  } else if (currentTool === "sticker") {
+    currentLine = new PlaceSticker(cursor.x, cursor.y, currentSticker);
+  }
+
+  if (currentLine) {
+    lines.push(currentLine);
+  }
   redoLines.length = 0;
+  notify("drawing-changed");
 
   notify("drawing-changed");
 });
@@ -100,24 +164,38 @@ canvas.addEventListener("mousemove", (e) => {
   cursor.y = e.offsetY;
 
   if (cursor.active && currentLine) {
-    currentLine.drag(cursor.x, cursor.y);
-    canvas.dispatchEvent(new Event("drawing-changed"));
-  } else {
-    if (!currentPreview) {
-      currentPreview = new ToolPreview(cursor.x, cursor.y, currentSize);
-    } else {
-      currentPreview.updatePosition(cursor.x, cursor.y);
+    // Only allow dragging for draw tool
+    if (currentTool === "draw" && currentLine instanceof PointHolder) {
+      currentLine.drag(cursor.x, cursor.y);
+      notify("drawing-changed");
     }
-    canvas.dispatchEvent(new Event("tool-moved"));
+  } else {
+    //check what the current tool is and uodate the preview accordingly
+    if (currentTool === "draw") {
+      if (!currentPreview) {
+        currentPreview = new ToolPreview(cursor.x, cursor.y, currentSize);
+      } else if (currentPreview instanceof ToolPreview) {
+        currentPreview.updatePosition(cursor.x, cursor.y);
+      }
+    } else {
+      if (!currentPreview) {
+        currentPreview = new StickerPreview(cursor.x, cursor.y, currentSticker);
+      } else if (currentPreview instanceof StickerPreview) {
+        currentPreview.updatePosition(cursor.x, cursor.y);
+      }
+    }
+    notify("tool-moved");
   }
 });
 
 canvas.addEventListener("mouseup", () => {
   cursor.active = false;
   currentLine = null;
-  currentPreview = new ToolPreview(cursor.x, cursor.y, currentSize);
 
-  notify("drawing-changed");
+  if (currentTool === "draw") {
+    currentPreview = new ToolPreview(cursor.x, cursor.y, currentSize);
+    notify("drawing-changed");
+  }
 });
 
 /*********************Event Listeners****************************************/
@@ -190,11 +268,13 @@ const thinButton = document.createElement("button");
 thinButton.innerHTML = "thin line";
 document.body.append(thinButton);
 thinButton.addEventListener("click", () => {
+  currentTool = "draw";
   currentSize = 4;
   setSelectedTool(thinButton);
-  if (currentPreview) {
+  if (currentPreview instanceof ToolPreview) { //ty w3schools for this one. had no idea what to do for this
     currentPreview.updateThickness(currentSize);
   }
+  notify("tool-moved");
 });
 
 const thickButton = document.createElement("button");
@@ -202,11 +282,29 @@ thickButton.innerHTML = "thick line";
 document.body.append(thickButton);
 
 thickButton.addEventListener("click", () => {
+  currentTool = "draw";
   currentSize = 10;
   setSelectedTool(thickButton);
-  if (currentPreview) {
+  if (currentPreview instanceof ToolPreview) {
     currentPreview.updateThickness(currentSize);
   }
+  notify("tool-moved");
+});
+
+//sticker buttons yippee
+//k had to get some outside help for this cos i literally could do something this advanced
+const stickers = ["🪼", "🐟", "🐋"];
+stickers.forEach((emoji) => {
+  const btn = document.createElement("button"); //create new button for each emoji
+  btn.textContent = emoji;
+  document.body.append(btn);
+  btn.addEventListener("click", () => {
+    currentTool = "sticker";
+    currentSticker = emoji;
+    setSelectedTool(btn);
+    currentPreview = new StickerPreview(cursor.x, cursor.y, emoji);
+    notify("tool-moved"); //throw the rool moved event
+  });
 });
 
 //functionality for changing the selected button, rest in style.css
