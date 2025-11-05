@@ -212,6 +212,10 @@ canvas.addEventListener("tool-moved", () => {
 
 function redraw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  ctx.fillStyle = "white";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
   for (const line of lines) {
     line.display(ctx);
   }
@@ -347,3 +351,38 @@ function setSelectedTool(selected: HTMLButtonElement) {
   );
   selected.classList.add("selectedTool");
 }
+
+//************************************ Export Button ************************************************** */
+// Create an export button
+const exportButton = document.createElement("button");
+exportButton.textContent = "Export PNG";
+document.body.append(exportButton);
+
+exportButton.addEventListener("click", () => {
+  //Create a new larger canvas (4x the size in each dimension)
+  const exportCanvas = document.createElement("canvas");
+  exportCanvas.width = 1024;
+  exportCanvas.height = 1024;
+
+  //Get its drawing context
+  const exportCtx = exportCanvas.getContext("2d");
+  if (!exportCtx) return;
+
+  exportCtx.fillStyle = "white";
+  exportCtx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
+
+  //Scale the context so drawings fill the larger canvas
+  exportCtx.scale(4, 4); // 256 * 4 = 1024
+
+  //edraw everything from your display list
+  // (Do not include tool previews — only the actual lines/stickers)
+  for (const line of lines) {
+    line.display(exportCtx);
+  }
+
+  // Convert to PNG and trigger a download
+  const anchor = document.createElement("a");
+  anchor.href = exportCanvas.toDataURL("image/png");
+  anchor.download = "sketchpad.png";
+  anchor.click();
+});
