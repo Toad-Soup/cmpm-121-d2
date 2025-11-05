@@ -9,10 +9,17 @@ document.body.innerHTML = `
 class PointHolder {
   points: { x: number; y: number }[] = [];
   thickness: number;
+  color: string;
 
-  constructor(startX: number, startY: number, thickness: number) {
+  constructor(
+    startX: number,
+    startY: number,
+    thickness: number,
+    color: string,
+  ) {
     this.points.push({ x: startX, y: startY });
     this.thickness = thickness;
+    this.color = color;
   }
 
   drag(x: number, y: number) {
@@ -31,6 +38,7 @@ class PointHolder {
     }
 
     ctx.lineWidth = this.thickness;
+    ctx.strokeStyle = this.color;
     ctx.stroke();
   }
 }
@@ -57,14 +65,16 @@ class ToolPreview {
   }
 
   display(ctx: CanvasRenderingContext2D) {
+    //had to google all this cos omg i ddidnt even know that arc was a thing
     ctx.save();
     ctx.beginPath();
-    ctx.strokeStyle = "rgba(0, 0, 0, 0.4)";
+    ctx.strokeStyle = currentColor;
+    ctx.fillStyle = currentColor;
     ctx.lineWidth = 1;
     ctx.arc(this.x, this.y, this.thickness / 2, 0, Math.PI * 2);
+    ctx.fill();
     ctx.stroke();
     ctx.restore();
-    ctx.fill();
   }
 }
 
@@ -73,11 +83,14 @@ class PlaceSticker {
   private x: number;
   private y: number;
   private sticker: string;
+  private rotation: number; //rotate in rads
 
   constructor(x: number, y: number, sticker: string) {
     this.x = x;
     this.y = y;
     this.sticker = sticker;
+    //had to google this :p
+    this.rotation = (Math.random() * 60 - 30) * (Math.PI / 180);
   }
 
   drag(x: number, y: number) {
@@ -86,14 +99,14 @@ class PlaceSticker {
   }
 
   display(ctx: CanvasRenderingContext2D) {
-    //ctx.font = "24px serif";
-    //ctx.fillText(this.sticker, this.x - 12, this.y + 8);
+    ctx.save();
+    ctx.translate(this.x, this.y);
+    ctx.rotate(this.rotation);
     ctx.font = `${stickerSize}px serif`;
-    ctx.fillText(
-      this.sticker,
-      this.x - stickerSize / 2,
-      this.y + stickerSize / 3,
-    );
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(this.sticker, 0, 0); //make sure that its drawn at the middle of the moji
+    ctx.restore();
   }
 }
 
@@ -147,6 +160,7 @@ let currentPreview: ToolPreview | StickerPreview | null = new ToolPreview(
 let currentSize = 4;
 let currentTool: "draw" | "sticker" = "draw";
 let currentSticker = "🪼";
+let currentColor = getRandomColor();
 
 canvas.addEventListener("mousedown", (e) => {
   cursor.active = true;
@@ -155,7 +169,12 @@ canvas.addEventListener("mousedown", (e) => {
   currentPreview = null;
 
   if (currentTool === "draw") {
-    currentLine = new PointHolder(cursor.x, cursor.y, currentSize);
+    currentLine = new PointHolder(
+      cursor.x,
+      cursor.y,
+      currentSize,
+      currentColor,
+    );
   } else if (currentTool === "sticker") {
     currentLine = new PlaceSticker(cursor.x, cursor.y, currentSticker);
   }
@@ -298,6 +317,7 @@ thinButton.addEventListener("click", () => {
   if (currentPreview instanceof ToolPreview) { //ty w3schools for this one. had no idea what to do for this
     currentPreview.updateThickness(currentSize);
   }
+  changeColor();
   notify("tool-moved");
 });
 
@@ -312,6 +332,7 @@ thickButton.addEventListener("click", () => {
   if (currentPreview instanceof ToolPreview) {
     currentPreview.updateThickness(currentSize);
   }
+  changeColor();
   notify("tool-moved");
 });
 
@@ -405,3 +426,15 @@ exportButton.addEventListener("click", () => {
   anchor.download = "sketchpad.png";
   anchor.click();
 });
+
+//********************************** Random Color **************************************/
+function getRandomColor(): string {
+  const r = Math.floor(Math.random() * 256);
+  const g = Math.floor(Math.random() * 256);
+  const b = Math.floor(Math.random() * 256);
+  return `rgb(${r}, ${g}, ${b})`;
+}
+
+function changeColor() {
+  currentColor = getRandomColor();
+}
