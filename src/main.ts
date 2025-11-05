@@ -86,8 +86,14 @@ class PlaceSticker {
   }
 
   display(ctx: CanvasRenderingContext2D) {
-    ctx.font = "24px serif";
-    ctx.fillText(this.sticker, this.x - 12, this.y + 8);
+    //ctx.font = "24px serif";
+    //ctx.fillText(this.sticker, this.x - 12, this.y + 8);
+    ctx.font = `${stickerSize}px serif`;
+    ctx.fillText(
+      this.sticker,
+      this.x - stickerSize / 2,
+      this.y + stickerSize / 3,
+    );
   }
 }
 
@@ -110,9 +116,13 @@ class StickerPreview {
 
   display(ctx: CanvasRenderingContext2D) {
     ctx.save();
-    ctx.font = "24px serif";
+    ctx.font = `${stickerSize}px serif`;
     ctx.globalAlpha = 0.5;
-    ctx.fillText(this.sticker, this.x - 12, this.y + 8);
+    ctx.fillText(
+      this.sticker,
+      this.x - stickerSize / 2,
+      this.y + stickerSize / 3,
+    );
     ctx.restore();
   }
 }
@@ -233,10 +243,19 @@ function notify(message: string) {
 /********************************Buttons**************************************************** */
 document.body.append(document.createElement("br"));
 
+//button organization
+const functContainer = document.createElement("div"); //container for undo redo and clear
+const lineContainer = document.createElement("div"); //container for the thin and thick line buttons
+const stickerContainer = document.createElement("div");
+
+document.body.append(functContainer);
+document.body.append(lineContainer);
+document.body.append(stickerContainer);
+
 //the following code is from Professor Smiths Quaint-Paint program
 const undoButton = document.createElement("button");
 undoButton.innerHTML = "undo";
-document.body.append(undoButton);
+functContainer.append(undoButton);
 
 undoButton.addEventListener("click", () => {
   const lastLine = lines.pop();
@@ -248,7 +267,7 @@ undoButton.addEventListener("click", () => {
 
 const redoButton = document.createElement("button");
 redoButton.innerHTML = "redo";
-document.body.append(redoButton);
+functContainer.append(redoButton);
 
 //inverse of the undo button
 redoButton.addEventListener("click", () => {
@@ -261,7 +280,7 @@ redoButton.addEventListener("click", () => {
 
 const clearButton = document.createElement("button");
 clearButton.innerHTML = "clear";
-document.body.append(clearButton);
+functContainer.append(clearButton);
 
 clearButton.addEventListener("click", () => {
   lines.length = 0;
@@ -270,7 +289,8 @@ clearButton.addEventListener("click", () => {
 
 const thinButton = document.createElement("button");
 thinButton.innerHTML = "thin line";
-document.body.append(thinButton);
+lineContainer.append(thinButton);
+
 thinButton.addEventListener("click", () => {
   currentTool = "draw";
   currentSize = 4;
@@ -283,7 +303,7 @@ thinButton.addEventListener("click", () => {
 
 const thickButton = document.createElement("button");
 thickButton.innerHTML = "thick line";
-document.body.append(thickButton);
+lineContainer.append(thickButton);
 
 thickButton.addEventListener("click", () => {
   currentTool = "draw";
@@ -295,17 +315,16 @@ thickButton.addEventListener("click", () => {
   notify("tool-moved");
 });
 
-//sticker buttons yippee
+//*************************** sticker buttons yippee **************************************//
 //k had to get some outside help for this cos i literally could do something this advanced
+
+const stickerSize = 48;
+
 const stickers = [
   { emoji: "🪼" },
   { emoji: "🐟" },
   { emoji: "🐋" },
 ];
-
-// Container to keep stickers grouped together
-const stickerContainer = document.createElement("div");
-document.body.append(stickerContainer);
 
 // Function to render all sticker buttons
 function makeStickers() {
