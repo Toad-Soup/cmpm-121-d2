@@ -293,19 +293,52 @@ thickButton.addEventListener("click", () => {
 
 //sticker buttons yippee
 //k had to get some outside help for this cos i literally could do something this advanced
-const stickers = ["🪼", "🐟", "🐋"];
-stickers.forEach((emoji) => {
-  const btn = document.createElement("button"); //create new button for each emoji
-  btn.textContent = emoji;
-  document.body.append(btn);
-  btn.addEventListener("click", () => {
-    currentTool = "sticker";
-    currentSticker = emoji;
-    setSelectedTool(btn);
-    currentPreview = new StickerPreview(cursor.x, cursor.y, emoji);
-    notify("tool-moved"); //throw the rool moved event
+const stickers = [
+  { emoji: "🪼" },
+  { emoji: "🐟" },
+  { emoji: "🐋" },
+];
+
+// Container to keep stickers grouped together
+const stickerContainer = document.createElement("div");
+document.body.append(stickerContainer);
+
+// Function to render all sticker buttons
+function makeStickers() {
+  // Clear old sticker buttons before re-rendering
+  stickerContainer.innerHTML = "";
+
+  // Create a button for each sticker in the array
+  stickers.forEach(({ emoji }) => {
+    const btn = document.createElement("button");
+    btn.textContent = emoji;
+    btn.classList.add("stickerButton");
+    stickerContainer.append(btn);
+
+    btn.addEventListener("click", () => {
+      currentTool = "sticker";
+      currentSticker = emoji;
+      setSelectedTool(btn);
+      currentPreview = new StickerPreview(cursor.x, cursor.y, emoji);
+      notify("tool-moved");
+    });
   });
-});
+
+  // make the custom sticker button at the end of the sticker button row
+  const addStickerButton = document.createElement("button");
+  addStickerButton.textContent = "Add Custom Sticker";
+  stickerContainer.append(addStickerButton);
+
+  addStickerButton.addEventListener("click", () => {
+    const newSticker = prompt("Enter a custom sticker emoji or text:", "🌊"); //custom sticker button
+    if (newSticker && newSticker.trim() !== "") {
+      stickers.push({ emoji: newSticker.trim() });
+      makeStickers(); //call the funct to add another custom sticker
+    }
+  });
+}
+
+makeStickers();
 
 //functionality for changing the selected button, rest in style.css
 function setSelectedTool(selected: HTMLButtonElement) {
